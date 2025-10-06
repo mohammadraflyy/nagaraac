@@ -3,6 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
     <title>{{ $data['appName'] }} — Dalam Perbaikan</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -27,7 +29,7 @@
         </div>
 
         <p class="text-sm text-gray-400 dark:text-gray-500">
-            Hingga 30 Oktober 2025, 00:00 WIB
+            Hingga 13 Oktober 2025, 00:00 WIB
         </p>
     </div>
 
@@ -51,7 +53,7 @@
         // === COUNTDOWN ===
         const countdownEl = document.getElementById('countdown');
         const finishedEl = document.getElementById('finished');
-        const targetTime = new Date('2025-10-30T00:00:00+07:00').getTime();
+        const targetTime = new Date('2025-10-13T00:00:00+07:00').getTime();
 
         function updateCountdown() {
             const now = new Date().getTime();
