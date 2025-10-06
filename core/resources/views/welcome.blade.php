@@ -27,7 +27,7 @@
         </div>
 
         <p class="text-sm text-gray-400 dark:text-gray-500">
-            Hingga 30 Oktober 2025, 00:00 WIB
+            Hingga 13 Oktober 2025, 00:00 WIB
         </p>
     </div>
 
@@ -51,7 +51,7 @@
         // === COUNTDOWN ===
         const countdownEl = document.getElementById('countdown');
         const finishedEl = document.getElementById('finished');
-        const targetTime = new Date('2025-10-30T00:00:00+07:00').getTime();
+        const targetTime = new Date('2025-10-13T00:00:00+07:00').getTime();
 
         function updateCountdown() {
             const now = new Date().getTime();
