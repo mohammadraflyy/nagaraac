@@ -53,7 +53,7 @@
         // === COUNTDOWN ===
         const countdownEl = document.getElementById('countdown');
         const finishedEl = document.getElementById('finished');
-        const targetTime = new Date('2025-10-13T00:00:00+07:00').getTime();
+        const targetTime = new Date('2025-10-20T00:00:00+07:00').getTime();
 
         function updateCountdown() {
             const now = new Date().getTime();
