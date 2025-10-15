@@ -1,163 +1,189 @@
-<div class="p-6 mx-auto bg-white dark:bg-zinc-900 shadow-md rounded-lg">
+<div class="p-6 mx-auto bg-white dark:bg-zinc-900 shadow-md rounded-lg" wire:ignore.self>
     <div class="flex justify-between mb-4">
-        <h2 class="text-xl font-bold">{{ $postId ? 'Edit Post' : 'Create Post' }}</h2>
-        <flux:button wire:navigate href="{{ route('posts.index') }}">
-            ← Back to Posts
+        <h2 class="text-xl font-bold">{{ $id ? 'Edit Post' : 'Create Post' }}</h2>
+        <flux:button wire:navigate href="{{ route('posts.index') }}" icon="chevron-left" class="flex items-center space-x-2">
+            Back to Posts
         </flux:button>
     </div>
 
-    @if(session()->has('message'))
+    @if (session()->has('message'))
         <div class="mb-4 p-2 text-xs font-bold bg-green-100 text-green-800 rounded-lg">
             {{ session('message') }}
         </div>
     @endif
 
-    <div class="flex flex-col md:flex-row gap-6">
-        <!-- Main Editor -->
-        <div class="flex-1">
-            <form wire:submit.prevent="{{ $postId ? 'update' : 'store' }}" class="space-y-4">
-                <!-- Title -->
-                <flux:input wire:model="title" label="Title" placeholder="Post Title" type="text" required />
+    <form wire:submit.prevent="{{ $id ? 'update' : 'store' }}" class="space-y-6">
+        <div class="flex flex-col md:flex-row gap-6">
+            <!-- Left Column - Content -->
+            <div class="flex-1 space-y-6">
+                <div class="bg-gray-50 dark:bg-zinc-800 rounded-lg p-6">
+                    <label class="block text-sm font-medium mb-4 text-zinc-700 dark:text-zinc-300">
+                        Content
+                    </label>
+                    <flux:textarea 
+                        wire:model.defer="content"
+                        name="content" 
+                        class="min-h-[500px] p-3"
+                        placeholder="Enter post content"
+                    >{{ $content }}</flux:textarea>
+                    
+                    @error('content')
+                        <span class="text-red-500 text-sm mt-2 block">{{ $message }}</span>
+                    @enderror
+                </div>
+            </div>
 
-                <!-- Content Editor -->
-                <div class="border p-4 min-h-[400px] space-y-3" x-data="{ showAddMenu: false }" x-ref="editor">
-                    @foreach($content as $index => $block)
-                        <div x-data="{ editing: false, showToolbar: false }" class="relative mb-2">
+            <!-- Right Column - Sidebar -->
+            <div class="w-full md:w-80 flex-shrink-0 space-y-6">
+                <div class="sticky top-6 space-y-6 bg-gray-50 dark:bg-zinc-800 rounded-lg p-6">
+                    <!-- Title -->
+                    <div>
+                        <flux:input 
+                            wire:model="title" 
+                            label="Title" 
+                            placeholder="Enter post title" 
+                            type="text" 
+                            required
+                            class="w-full"
+                        />
+                        @error('title')
+                            <span class="text-red-500 text-sm mt-1 block">{{ $message }}</span>
+                        @enderror
+                    </div>
 
-                            <!-- Toolbar on click -->
-                            <div x-show="showToolbar" x-cloak
-                                 @click.outside="showToolbar=false; editing=false"
-                                 class="absolute -top-10 left-0 bg-white border rounded shadow p-1 flex space-x-1 z-50">
-                                <select wire:change="updateBlockType({{ $index }}, $event.target.value)"
-                                        class="border px-1 py-0 text-sm">
-                                    <option value="p" @selected($block['type'] === 'p')>Paragraph</option>
-                                    <option value="h1" @selected($block['type'] === 'h1')>H1</option>
-                                    <option value="h2" @selected($block['type'] === 'h2')>H2</option>
-                                    <option value="h3" @selected($block['type'] === 'h3')>H3</option>
-                                    <option value="h4" @selected($block['type'] === 'h4')>H4</option>
-                                </select>
-                                <button wire:click="toggleBold({{ $index }})" class="px-1 text-sm font-bold">B</button>
-                                <button wire:click="toggleItalic({{ $index }})" class="px-1 text-sm italic">I</button>
-                                <button wire:click="removeBlock({{ $index }})"
-                                        class="px-1 text-sm text-red-600 font-bold">✕</button>
+                    <!-- Status -->
+                    <div>
+                        <flux:select wire:model="status" label="Status" required class="w-full">
+                            <flux:select.option value="unpublished">Unpublished</flux:select.option>
+                            <flux:select.option value="published">Published</flux:select.option>
+                        </flux:select>
+                        @error('status')
+                            <span class="text-red-500 text-sm mt-1 block">{{ $message }}</span>
+                        @enderror
+                    </div>
+
+                    <!-- Featured Image -->
+                    <div>
+                        <flux:label for="featured_image" class="block text-sm font-medium mb-2">
+                            Featured Image
+                        </flux:label>
+                        <input 
+                            type="file" 
+                            wire:model="featured_image" 
+                            id="featured_image"
+                            class="w-full text-sm bg-white dark:bg-zinc-700 p-3 rounded-lg border border-zinc-300 dark:border-zinc-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                            accept="image/*"
+                        >
+                        @error('featured_image')
+                            <span class="text-red-500 text-sm mt-1 block">{{ $message }}</span>
+                        @enderror
+                        
+                        @if ($existingImage)
+                            <div class="mt-3">
+                                <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-2">Current Image:</p>
+                                <img 
+                                    src="{{ asset('storage/media/' . $existingImage) }}" 
+                                    class="w-full h-40 object-cover rounded-lg border border-zinc-300 dark:border-zinc-600"
+                                    alt="Current featured image"
+                                >
                             </div>
+                        @endif
 
-                            @if($block['type'] === 'image')
-                                <img src="{{ asset('storage/' . $block['value']) }}" class="max-w-full rounded shadow mb-2"
-                                     @click="showToolbar = true">
-                            @else
-                                @php
-                                    $classes = match($block['type']) {
-                                        'h1' => 'text-3xl font-bold leading-tight',
-                                        'h2' => 'text-2xl font-semibold leading-tight',
-                                        'h3' => 'text-xl font-semibold leading-tight',
-                                        'h4' => 'text-lg font-semibold leading-snug',
-                                        'p'  => 'text-base leading-normal',
-                                        default => 'text-base',
-                                    };
-                                    if(!empty($block['bold'])) $classes .= ' font-bold';
-                                    if(!empty($block['italic'])) $classes .= ' italic';
-                                @endphp
+                        @if ($featured_image && !$featured_image->getError())
+                            <div class="mt-3">
+                                <p class="text-sm text-zinc-600 dark:text-zinc-400 mb-2">New Image Preview:</p>
+                                <img 
+                                    src="{{ $featured_image->temporaryUrl() }}" 
+                                    class="w-full h-40 object-cover rounded-lg border border-zinc-300 dark:border-zinc-600"
+                                    alt="New featured image preview"
+                                >
+                            </div>
+                        @endif
+                    </div>
 
-                                <div>
-                                    <div x-show="!editing" @click="editing=true; showToolbar=true"
-                                         class="cursor-pointer {{ $classes }}">
-                                        {{ $block['value'] }}
-                                    </div>
-                                    <input x-show="editing" x-cloak type="text"
-                                           x-ref="input"
-                                           class="w-full border-0 focus:outline-none bg-transparent px-0 {{ $classes }}"
-                                           wire:input.debounce.500ms="updateBlock({{ $index }}, $event.target.value)"
-                                           x-on:blur="editing = false"
-                                           :value="$refs.input?.value || '{{ $block['value'] }}'">
-                                </div>
-                            @endif
-                        </div>
-                    @endforeach
+                    <!-- Categories -->
+                    <div>
+                        <flux:label for="selectedCategories" class="block text-sm font-medium mb-2">
+                            Categories (Select at least one)
+                        </flux:label>
+                        <select 
+                            wire:model="selectedCategories" 
+                            multiple 
+                            id="selectedCategories"
+                            class="w-full border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 p-3 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                            size="4"
+                        >
+                            @foreach($categories as $cat)
+                                <option value="{{ $cat->id }}">
+                                    {{ $cat->title }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('selectedCategories')
+                            <span class="text-red-500 text-sm mt-1 block">{{ $message }}</span>
+                        @enderror
+                        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                            Hold Ctrl/Cmd to select multiple
+                        </p>
+                    </div>
 
-                    <!-- Add Block Button & Popup -->
-                    <div class="relative mt-2">
-                        <button @click="showAddMenu = !showAddMenu"
-                                class="px-3 py-1 bg-blue-500 text-white rounded">
-                            + Add Block
+                    <!-- Tags -->
+                    <div>
+                        <flux:label for="selectedTags" class="block text-sm font-medium mb-2">
+                            Tags (Select at least one)
+                        </flux:label>
+                        <select 
+                            wire:model="selectedTags" 
+                            multiple 
+                            id="selectedTags"
+                            class="w-full border border-zinc-300 dark:border-zinc-600 rounded-lg bg-white dark:bg-zinc-700 p-3 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                            size="4"
+                        >
+                            @foreach($tags as $tag)
+                                <option value="{{ $tag->id }}">
+                                    {{ $tag->title ?? $tag->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                        @error('selectedTags')
+                            <span class="text-red-500 text-sm mt-1 block">{{ $message }}</span>
+                        @enderror
+                        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+                            Hold Ctrl/Cmd to select multiple
+                        </p>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="flex items-center space-x-3 pt-4 border-t border-zinc-200 dark:border-zinc-700">
+                        <button 
+                            type="submit" 
+                            class="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                            wire:loading.attr="disabled"
+                            wire:target="store,update"
+                        >
+                            <span wire:loading.remove wire:target="store,update">
+                                {{ $id ? 'Update Post' : 'Create Post' }}
+                            </span>
+                            <span wire:loading wire:target="store,update">
+                                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Processing...
+                            </span>
                         </button>
-
-                        <div x-show="showAddMenu" x-cloak
-                             @click.outside="showAddMenu = false"
-                             class="absolute left-0 mt-2 w-40 bg-white border rounded shadow-lg flex flex-col z-50">
-                            <button wire:click="addBlock('h1'); showAddMenu=false"
-                                    class="px-3 py-2 hover:bg-gray-100 text-left">H1</button>
-                            <button wire:click="addBlock('h2'); showAddMenu=false"
-                                    class="px-3 py-2 hover:bg-gray-100 text-left">H2</button>
-                            <button wire:click="addBlock('h3'); showAddMenu=false"
-                                    class="px-3 py-2 hover:bg-gray-100 text-left">H3</button>
-                            <button wire:click="addBlock('h4'); showAddMenu=false"
-                                    class="px-3 py-2 hover:bg-gray-100 text-left">H4</button>
-                            <button wire:click="addBlock('p'); showAddMenu=false"
-                                    class="px-3 py-2 hover:bg-gray-100 text-left">Paragraph</button>
-
-                            <div class="px-3 py-2 border-t">
-                                <input type="file" wire:model="featured_image" accept="image/*" class="mb-1 w-full">
-                                <button wire:click="addBlock('image'); showAddMenu=false"
-                                        class="px-2 py-1 bg-green-500 text-white rounded w-full">Add Image</button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flex items-center space-x-2 mt-4">
-                        <flux:button type="submit" variant="primary" size="sm">
-                            {{ $postId ? 'Update' : 'Save' }}
-                        </flux:button>
-                        <flux:button wire:click="resetForm" variant="filled" size="sm">
+                        
+                        <button 
+                            type="button" 
+                            wire:click="resetForm" 
+                            class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition font-medium focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                            wire:loading.attr="disabled"
+                        >
                             Reset
-                        </flux:button>
+                        </button>
                     </div>
-                </div>
-            </form>
-        </div>
-
-        <!-- Right Sidebar -->
-        <div class="w-full md:w-72 flex-shrink-0 space-y-4">
-            <div class="sticky top-6 space-y-4 bg-gray-50 dark:bg-zinc-800">
-                <!-- Status -->
-                <div class="p-4">
-                    <label class="block text-sm font-medium mb-1">Status</label>
-                    <select wire:model="status" class="w-full border rounded p-2 dark:bg-zinc-700">
-                        <option value="unpublished">Unpublished</option>
-                        <option value="published">Published</option>
-                    </select>
-                </div>
-
-                <!-- Featured Image -->
-                <div class="p-4">
-                    <label class="block text-sm font-medium mb-1">Featured Image</label>
-                    <input type="file" wire:model="featured_image" class="w-full text-sm" accept="image/*">
-                    @if ($existingImage)
-                        <img src="{{ asset('storage/media/' . $existingImage) }}"
-                             class="mt-2 w-full h-32 object-cover rounded">
-                    @endif
-                </div>
-
-                <!-- Categories -->
-                <div class="p-4">
-                    <label class="block text-sm font-medium mb-1">Categories</label>
-                    <select wire:model="selectedCategories" multiple class="w-full border rounded p-2 dark:bg-zinc-700">
-                        @foreach($categories as $cat)
-                            <option value="{{ $cat->id }}">{{ $cat->title ?? $cat->name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <!-- Tags -->
-                <div class="p-4">
-                    <label class="block text-sm font-medium mb-1">Tags</label>
-                    <select wire:model="selectedTags" multiple class="w-full border rounded p-2 dark:bg-zinc-700">
-                        @foreach($tags as $tag)
-                            <option value="{{ $tag->id }}">{{ $tag->title ?? $tag->name }}</option>
-                        @endforeach
-                    </select>
                 </div>
             </div>
         </div>
-    </div>
+    </form>
 </div>

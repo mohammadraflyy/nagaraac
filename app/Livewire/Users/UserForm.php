@@ -8,20 +8,24 @@ use Illuminate\Support\Facades\Hash;
 
 class UserForm extends Component
 {
-    public $userId;
+    public $id = null;
     public $name;
     public $email;
     public $password;
     public $role = 'user';
     public $roles = ['administrator','user'];
     public $open = true;
+    public $loading = false;
 
-    protected $listeners = ['openUserForm' => 'openForm'];
+    protected $listeners = [
+        'openForm' => 'openForm',
+        'loadUserDeferred' => 'loadUser'
+    ];
 
-    public function mount($userId = null)
+    public function mount($id = null)
     {
-        if ($userId) {
-            $this->loadUser($userId);
+        if ($id) {
+            $this->loadUser($id);
         }
     }
 
@@ -30,17 +34,24 @@ class UserForm extends Component
         $this->open = true;
 
         if ($id) {
-            $this->loadUser($id);
+            $this->loading = true;
+
+            $this->dispatch('loadUserDeferred', id: $id);
+        } else {
+            $this->reset(['id', 'name', 'email', 'password', 'role']);
         }
     }
 
     public function loadUser($id)
     {
         $user = User::findOrFail($id);
-        $this->userId = $user->id;
+        $this->id = $user->id;
         $this->name = $user->name;
         $this->email = $user->email;
         $this->role = $user->role;
+
+        sleep(1);
+        $this->loading = false;
     }
 
     public function store()
@@ -61,18 +72,18 @@ class UserForm extends Component
 
         session()->flash('message', 'User created successfully.');
         $this->resetForm();
-        $this->dispatch('userSaved');
+        $this->dispatch('saved');
     }
 
     public function update()
     {
         $this->validate([
             'name' => 'required|string',
-            'email' => 'required|email|unique:users,email,' . $this->userId,
+            'email' => 'required|email|unique:users,email,' . $this->id,
             'role' => 'required|string',
         ]);
 
-        $user = User::findOrFail($this->userId);
+        $user = User::findOrFail($this->id);
         $user->update([
             'name' => $this->name,
             'email' => $this->email,
@@ -81,12 +92,12 @@ class UserForm extends Component
 
         session()->flash('message', 'User updated successfully.');
         $this->resetForm();
-        $this->dispatch('userSaved');
+        $this->dispatch('saved');
     }
 
     public function resetForm()
     {
-        $this->reset(['userId', 'name', 'email', 'password', 'role']);
+        $this->reset(['id', 'name', 'email', 'password', 'role']);
     }
 
     public function render()

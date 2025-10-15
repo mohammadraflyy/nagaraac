@@ -41,7 +41,7 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('posts')->group(function () {
         Route::get('/', PostTable::class)->name('posts.index');
         Route::get('/create', PostForm::class)->name('posts.create');
-        Route::get('/{id}/edit', PostForm::class)->name('posts.edit');
+        Route::get('/{id}', PostForm::class)->name('posts.edit');
     });
 
     Route::get('settings/two-factor', TwoFactor::class)

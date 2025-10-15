@@ -11,203 +11,197 @@ use App\Models\Tag;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Livewire\Attributes\Url;
 
 class PostForm extends Component
 {
     use WithFileUploads;
 
-    public ?string $postId = null;
-    public $title;
-    public $content = [];
+    #[Url]
+    public ?string $id = null;
+    public $title = '';
+    public $content = '';
     public $status = 'unpublished';
     public $featured_image;
     public $existingImage;
     public $selectedCategories = [];
     public $selectedTags = [];
     public $open = true;
-    public $standalone = false; 
+    public $standalone = false;
 
-    protected $listeners = ['openPostForm' => 'openForm'];
+    protected $listeners = [
+        'openPostForm' => 'openForm',
+        'refreshTinyMCE' => 'refreshTinyMCE',
+        'setContent' => 'setContent'
+    ];
 
-    public function mount(?string $postId = null)
+    public function setContent($content)
     {
-        $this->postId = $postId;
-        if ($postId) {
-            $this->loadPost($postId);
+        $this->content = $content;
+    }
+
+    public function mount()
+    {
+        if ($this->id) {
+            $this->loadPost($this->id);
         }
+
+        $this->dispatch('initTinyMCE');
     }
 
-    public function addBlock($type)
+    public function updatedId($value)
     {
-        if ($type === 'image') {
-            $this->validate([
-                'featured_image' => 'nullable|image|max:2048',
-            ]);
-
-            if ($this->featured_image) {
-                $hash = Str::random(40) . '.' . $this->featured_image->getClientOriginalExtension();
-                $this->featured_image->storeAs('media', $hash, 'public');
-
-                $this->content[] = [
-                    'type' => 'image',
-                    'value' => $hash
-                ];
-
-                $this->featured_image = null;
-            }
-
-        } else {
-            $this->content[] = [
-                'type' => $type,
-                'value' => "New $type"
-            ];
+        if ($value) {
+            $this->loadPost($value);
         }
-    }
-
-    public function updateBlock($index, $value)
-    {
-        $this->content[$index]['value'] = $value;
-    }
-
-    public function updateBlockType($index, $type)
-    {
-        $this->content[$index]['type'] = $type;
-    }
-
-    public function toggleBold($index)
-    {
-        $this->content[$index]['bold'] = !($this->content[$index]['bold'] ?? false);
-    }
-
-    public function toggleItalic($index)
-    {
-        $this->content[$index]['italic'] = !($this->content[$index]['italic'] ?? false);
-    }
-
-    public function removeBlock($index)
-    {
-        array_splice($this->content, $index, 1);
     }
 
     public function loadPost($id)
     {
         $post = Post::with(['featuredImage', 'categories', 'tags'])->findOrFail($id);
-        $this->postId = $post->id;
+
+        $this->id = $post->id;
         $this->title = $post->title;
         $this->content = $post->content;
         $this->status = $post->status;
-        $this->existingImage = $post->media?->hash_name;
+        $this->existingImage = $post->featuredImage?->hash_name;
         $this->selectedCategories = $post->categories->pluck('id')->toArray();
         $this->selectedTags = $post->tags->pluck('id')->toArray();
+
+        $this->dispatch('updateTinyMCEContent', content: $this->content);
     }
 
     public function store()
     {
         $this->validate([
             'title' => 'required|string|max:255',
-            'content' => 'required|string',
+            'content' => 'required|string|min:10',
             'status' => 'required|in:published,unpublished',
             'featured_image' => 'nullable|image|max:2048',
+            'selectedCategories' => 'required|array|min:1',
+            'selectedTags' => 'required|array|min:1',
         ]);
 
-        $featuredMediaId = null;
+        try {
+            $featuredMediaId = null;
 
-        if ($this->featured_image) {
-            $hashedName = Str::random(40) . '.' . $this->featured_image->getClientOriginalExtension();
-            $this->featured_image->storeAs('media', $hashedName, 'public');
+            if ($this->featured_image) {
+                $hashedName = Str::random(40) . '.' . $this->featured_image->getClientOriginalExtension();
+                $path = $this->featured_image->storeAs('media', $hashedName, 'public');
+             
+                $media = Media::create([
+                    'client_name' => $this->featured_image->getClientOriginalName(),
+                    'hash_name' => $hashedName,
+                    'file_size' => $this->featured_image->getSize(),
+                    'file_format' => $this->featured_image->getClientOriginalExtension(),
+                    'media_type' => 'post',
+                ]);
 
-            $media = Media::create([
-                'client_name' => $this->featured_image->getClientOriginalName(),
-                'hash_name' => $hashedName,
-                'file_size' => $this->featured_image->getSize(),
-                'file_format' => $this->featured_image->getClientOriginalExtension(),
-                'media_type' => 'post',
+                $featuredMediaId = $media->id;
+            }
+
+            $post = Post::create([
+                'id' => Str::uuid(),
+                'title' => $this->title,
+                'content' => $this->content,
+                'status' => $this->status,
+                'users_id' => Auth::id(),
+                'featured_media' => $featuredMediaId,
             ]);
 
-            $featuredMediaId = $media->id;
+            $post->categories()->sync($this->selectedCategories);
+
+            $post->tags()->sync($this->selectedTags);
+
+            session()->flash('message', 'Post created successfully!');
+
+            $this->resetForm();
+            $this->dispatch('postSaved');
+
+        } catch (\Exception $e) {
+            session()->flash('error', 'Failed to create post: ' . $e->getMessage());
         }
-
-        $post = Post::create([
-            'id' => Str::uuid(),
-            'title' => $this->title,
-            'content' => $this->content,
-            'status' => $this->status,
-            'users_id' => Auth::id(),
-            'featured_media' => $featuredMediaId,
-        ]);
-
-        $post->categories()->sync($this->selectedCategories);
-        $post->tags()->sync($this->selectedTags);
-
-        session()->flash('message', 'Post created successfully.');
-
-        if ($this->standalone) {
-            return redirect()->route('posts.index');
-        }
-
-        $this->resetForm();
-        $this->dispatch('postSaved');
     }
 
     public function update()
     {
         $this->validate([
             'title' => 'required|string|max:255',
-            'content' => 'required|string',
+            'content' => 'required|string|min:10',
             'status' => 'required|in:published,unpublished',
             'featured_image' => 'nullable|image|max:2048',
+            'selectedCategories' => 'required|array|min:1',
+            'selectedTags' => 'required|array|min:1',
         ]);
 
-        $post = Post::findOrFail($this->postId);
-        $featuredMediaId = $post->featured_media;
+        try {
+            $post = Post::findOrFail($this->id);
+            $featuredMediaId = $post->featured_media;
 
-        if ($this->featured_image) {
-            if ($post->media && Storage::disk('public')->exists('media/' . $post->media->hash_name)) {
-                Storage::disk('public')->delete('media/' . $post->media->hash_name);
-                $post->media->delete();
+            if ($this->featured_image) {
+                if ($post->featuredImage) {
+                    Storage::disk('public')->delete('media/' . $post->featuredImage->hash_name);
+                    $post->featuredImage->delete();
+                }
+
+                $hashedName = Str::random(40) . '.' . $this->featured_image->getClientOriginalExtension();
+                $this->featured_image->storeAs('media', $hashedName, 'public');
+
+                $media = Media::create([
+                    'client_name' => $this->featured_image->getClientOriginalName(),
+                    'hash_name' => $hashedName,
+                    'file_size' => $this->featured_image->getSize(),
+                    'file_format' => $this->featured_image->getClientOriginalExtension(),
+                    'media_type' => 'post',
+                ]);
+
+                $featuredMediaId = $media->id;
             }
 
-            $hashedName = Str::random(40) . '.' . $this->featured_image->getClientOriginalExtension();
-            $this->featured_image->storeAs('media', $hashedName, 'public');
-
-            $media = Media::create([
-                'client_name' => $this->featured_image->getClientOriginalName(),
-                'hash_name' => $hashedName,
-                'file_size' => $this->featured_image->getSize(),
-                'file_format' => $this->featured_image->getClientOriginalExtension(),
-                'media_type' => 'post',
+            // Update post
+            $post->update([
+                'title' => $this->title,
+                'content' => $this->content,
+                'status' => $this->status,
+                'featured_media' => $featuredMediaId,
             ]);
 
-            $featuredMediaId = $media->id;
+            // Sync relationships
+            $post->categories()->sync($this->selectedCategories);
+            $post->tags()->sync($this->selectedTags);
+            // Update existing image for display
+            $this->existingImage = $post->featuredImage?->hash_name;
+
+            session()->flash('message', 'Post updated successfully!');
+        } catch (\Exception $e) {
+            session()->flash('error', 'Failed to update post: ' . $e->getMessage());
         }
-
-        $post->update([
-            'title' => $this->title,
-            'content' => $this->content,
-            'status' => $this->status,
-            'featured_media' => $featuredMediaId,
-        ]);
-
-        $post->categories()->sync($this->selectedCategories);
-        $post->tags()->sync($this->selectedTags);
-
-        session()->flash('message', 'Post updated successfully.');
-
-        if ($this->standalone) {
-            return redirect()->route('posts.index');
-        }
-
-        $this->resetForm();
-        $this->dispatch('postUpdated');
     }
 
     public function resetForm()
     {
         $this->reset([
-            'postId', 'title', 'content', 'status',
+            'id', 'title', 'content', 'status',
             'featured_image', 'existingImage',
-            'selectedCategories', 'selectedTags', 'open'
+            'selectedCategories', 'selectedTags'
         ]);
+        
+        $this->dispatch('resetTinyMCE');
+    }
+
+    public function refreshTinyMCE()
+    {
+        $this->dispatch('refreshTinyMCE');
+    }
+
+    public function openForm($id = null)
+    {
+        if ($id) {
+            $this->loadPost($id);
+        } else {
+            $this->resetForm();
+        }
+        $this->open = true;
     }
 
     public function render()

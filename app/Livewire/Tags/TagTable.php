@@ -4,28 +4,37 @@ namespace App\Livewire\Tags;
 
 use Livewire\Component;
 use App\Models\Tag;
+use App\Livewire\Traits\WithDataTableActions;
 
 class TagTable extends Component
 {
-    protected $listeners = ['tagSaved' => '$refresh'];
+    use WithDataTableActions;
 
-    public function edit($id)
+    protected $listeners = ['saved' => '$refresh'];
+
+    public string $modelClass = Tag::class;
+    public string $entityName = 'tag';
+
+    protected function getDisplayedItems()
     {
-        $this->dispatch('editTag', $id);
-    }
+        $searchableFields = ['title', 'desc'];
 
-    public function delete($id)
-    {
-        $tag = Tag::findOrFail($id);
-        $tag->delete();
-
-        $this->dispatch('tagDeleted');
+        return Tag::query()
+            ->when($this->searchTerm, function ($query) use ($searchableFields) {
+                $query->where(function ($q) use ($searchableFields) {
+                    foreach ($searchableFields as $field) {
+                        $q->orWhere($field, 'like', '%' . $this->searchTerm . '%');
+                    }
+                });
+            })
+            ->orderByDesc('id')
+            ->paginate($this->perPage);
     }
 
     public function render()
     {
         return view('livewire.tags.tag-table', [
-            'tags' => Tag::all(),
+            'tags' => $this->getDisplayedItems(),
         ]);
     }
 }

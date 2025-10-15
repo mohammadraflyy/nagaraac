@@ -7,17 +7,21 @@ use App\Models\Category;
 
 class CategoryForm extends Component
 {
-    public $categoryId;
+    public $id = null;
     public $title;
     public $desc;
     public $open = true;
+    public $loading = false;
 
-    protected $listeners = ['openCategoryForm' => 'openForm'];
+    protected $listeners = [
+        'openForm' => 'openForm',
+        'loadCategoryDeferred' => 'loadCategory'
+    ];
 
-    public function mount($categoryId = null)
+    public function mount($id = null)
     {
-        if ($categoryId) {
-            $this->loadCategory($categoryId);
+        if ($id) {
+            $this->loadCategory($id);
         }
     }
 
@@ -26,16 +30,21 @@ class CategoryForm extends Component
         $this->open = true;
 
         if ($id) {
-            $this->loadCategory($id);
+            $this->loading = true;
+
+            $this->dispatch('loadCategoryDeferred', id: $id);
         }
     }
 
     public function loadCategory($id)
     {
         $category = Category::findOrFail($id);
-        $this->categoryId = $category->id;
+        $this->id = $category->id;
         $this->title = $category->title;
         $this->desc = $category->desc;
+        
+        sleep(1);
+        $this->loading = false;
     }
 
     public function store()
@@ -63,7 +72,7 @@ class CategoryForm extends Component
             'desc' => 'nullable|string',
         ]);
 
-        $category = Category::findOrFail($this->categoryId);
+        $category = Category::findOrFail($this->id);
         $category->update([
             'title' => $this->title,
             'desc' => $this->desc,
@@ -76,7 +85,7 @@ class CategoryForm extends Component
 
     public function resetForm()
     {
-        $this->reset(['categoryId', 'title', 'desc', 'open']);
+        $this->reset(['id', 'title', 'desc', 'open']);
     }
 
     public function render()

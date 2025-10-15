@@ -4,39 +4,38 @@ namespace App\Livewire\Media;
 
 use Livewire\Component;
 use App\Models\Media;
-use Illuminate\Support\Facades\Storage;
+use App\Livewire\Traits\WithDataTableActions;
 
 class MediaTable extends Component
 {
-    protected $listeners = [
-        'mediaSaved' => '$refresh', 
-        'mediaUpdated' => '$refresh'
-    ];
+    use WithDataTableActions;
 
-    public function delete($id)
+    protected $listeners = ['saved' => '$refresh'];
+
+    public string $modelClass = Media::class;
+    public string $entityName = 'media';
+
+    protected function getDisplayedItems()
     {
-        $media = Media::findOrFail($id);
-
-        if ($media->hash_name && Storage::disk('public')->exists('media/' . $media->hash_name)) {
-            Storage::disk('public')->delete('media/' . $media->hash_name);
-        }
-
-        $media->delete();
-
-        session()->flash('message', 'Media deleted successfully.');
-
-        $this->dispatch('mediaDeleted');
-    }
-
-    public function edit($id)
-    {
-        $this->dispatch('openMediaForm', $id);
+        $searchableFields = ['client_name', 'file_format', 'media_type'];
+        
+        return Media::query()
+            ->when($this->searchTerm, function($query) use ($searchableFields) {
+                $query->where(function($q) use ($searchableFields) {
+                    foreach ($searchableFields as $field) {
+                        $q->orWhere($field, 'like', '%' . $this->searchTerm . '%');
+                    }
+                });
+            })
+            ->where('media_type', '!=', 'post')
+            ->orderByDesc('id')
+            ->paginate($this->perPage);
     }
 
     public function render()
     {
         return view('livewire.media.media-table', [
-            'medias' => Media::orderByDesc('id')->where('media_type', '!=' ,'post')->get(),
+            'medias' => $this->getDisplayedItems(),
         ]);
     }
 }

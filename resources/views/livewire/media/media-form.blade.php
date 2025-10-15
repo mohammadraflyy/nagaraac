@@ -1,7 +1,7 @@
 <div class="p-6 mx-auto bg-white dark:bg-zinc-900 shadow-md rounded-lg">
     <div class="flex justify-between items-center mb-4">
         <h2 class="text-xl font-bold">
-            {{ $mediaId ? 'Edit Media' : 'Add Photos' }}
+            {{ $id ? 'Edit Media' : 'Add Photos' }}
         </h2>
 
         <flux:button wire:click="$toggle('open')" variant="filled" size="sm">
@@ -15,27 +15,19 @@
 
     @if ($open)
         <div x-transition>
-            {{-- ✅ Flash message --}}
             @if (session()->has('message'))
                 <div class="mb-4 p-2 text-xs font-bold bg-green-100 text-green-800 rounded-lg">
                     {{ session('message') }}
                 </div>
             @endif
 
-            {{-- ✅ Unified form (create or update) --}}
-            <form wire:submit.prevent="{{ $mediaId ? 'update' : 'store' }}" class="space-y-4">
-                
-                {{-- Media Type --}}
+            <form wire:submit.prevent="{{ $id ? 'update' : 'store' }}" class="space-y-4">
                 <div>
-                    <flux:label class="pb-2">Media Type</flux:label>
-                    <select
-                        wire:model="mediaType"
-                        class="block w-full p-2 border border-gray-300 rounded-lg text-sm bg-gray-50 dark:bg-zinc-800 dark:text-gray-200 focus:outline-none"
-                    >
+                    <flux:select wire:model="mediaType" placeholder="Choose Media Type..." lable="Media Type">
                         @foreach ($mediaTypes as $type)
-                            <option value="{{ $type }}">{{ ucfirst($type) }}</option>
+                        <flux:select.option value="{{ $type }}">{{ ucfirst($type) }}</flux:select.option>
                         @endforeach
-                    </select>
+                    </flux:select>
                     @error('mediaType')
                         <p class="mt-1 text-xs text-red-500">{{ $message }}</p>
                     @enderror
@@ -76,7 +68,7 @@
 
                 <div class="flex items-center space-x-2 pt-2">
                     <flux:button type="submit" variant="primary" size="sm">
-                        {{ $mediaId ? 'Update' : 'Save' }}
+                        {{ $id ? 'Update' : 'Save' }}
                     </flux:button>
                     <flux:button type="button" wire:click="resetForm" variant="filled" size="sm">
                         Reset
