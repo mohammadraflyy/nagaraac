@@ -10,18 +10,22 @@ use App\Livewire\Settings\Profile;
 use App\Livewire\Settings\TwoFactor;
 use App\Livewire\Tags\TagManager;
 use App\Livewire\Users\UserManager;
+use App\Livewire\Home\Home;
 use App\Models\Media;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 
-Route::get('/', function () {
-    return view('maintainance', [
-        'data' => [
-            'appName' => 'Nagara AC Batang',
-            'image' => Media::where('media_type', 'galleries')->get(),
-        ],
-    ]);
-})->name('home');
+Route::get('/', env('APP_MAINTENANCE', false)
+    ? function () {
+        return view('maintainance', [
+            'data' => [
+                'appName' => 'Nagara AC Batang',
+                'image' => Media::where('media_type', 'galleries')->get(),
+            ],
+        ]);
+    }
+    : Home::class
+)->name('home');
 
 Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified'])

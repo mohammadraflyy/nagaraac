@@ -11,4 +11,6 @@
 <link href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600" rel="stylesheet" />
 
 @vite(['resources/css/app.css', 'resources/js/app.js'])
+
+<script src="https://kit.fontawesome.com/8ef7ea110e.js" crossorigin="anonymous"></script>
 @fluxAppearance

@@ -36,4 +36,9 @@ class Media extends Model
     {
         return $this->hasMany(Post::class, 'featured_media');
     }
+
+    public function getUrlAttribute()
+    {
+        return asset('storage/media/' . $this->hash_name);
+    }
 }
