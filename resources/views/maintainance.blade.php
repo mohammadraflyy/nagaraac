@@ -8,9 +8,8 @@
     <title>{{ $data['appName'] }} — Dalam Perbaikan</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="h-screen bg-gray-100 dark:bg-gray-900 flex flex-col lg:flex-row items-center justify-center">
+<body class="h-screen bg-white dark:bg-neutral-900 flex flex-col lg:flex-row items-center justify-center">
 
-    <!-- KIRI: INFO -->
     <div class="flex-1 flex flex-col items-center justify-center text-center space-y-6 p-8">
         <h1 class="text-4xl font-bold text-gray-800 dark:text-gray-100">
             Website Sedang Dalam Perbaikan
@@ -21,7 +20,6 @@
             Silakan kembali lagi nanti.
         </p>
 
-        <!-- Countdown -->
         <div id="countdown" class="text-2xl font-semibold text-gray-700 dark:text-gray-200"></div>
 
         <div id="finished" class="text-2xl font-semibold text-green-600 dark:text-green-400 hidden">
@@ -33,7 +31,6 @@
         </p>
     </div>
 
-    <!-- KANAN: SLIDESHOW -->
     <div class="flex-1 relative w-full h-1/2 lg:h-full overflow-hidden">
         @php
             $images = $data['image']->pluck('hash_name');
@@ -50,7 +47,6 @@
     </div>
 
     <script>
-        // === COUNTDOWN ===
         const countdownEl = document.getElementById('countdown');
         const finishedEl = document.getElementById('finished');
         const targetTime = new Date('2025-10-20T00:00:00+07:00').getTime();
@@ -76,7 +72,6 @@
         updateCountdown();
         setInterval(updateCountdown, 1000);
 
-        // === SLIDESHOW ===
         const slides = document.querySelectorAll('.slide');
         let currentSlide = 0;
 
