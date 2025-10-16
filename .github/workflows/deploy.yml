@@ -84,7 +84,7 @@ jobs:
           local-dir: ./public
           server-dir: /public_html/         # root domain utama
           exclude: |
-            storage/
+            /storage/
           dry-run: false
 
       # --------- Run Artisan via SSH & update index.php -----------
