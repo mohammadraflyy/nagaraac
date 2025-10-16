@@ -52,7 +52,7 @@ jobs:
       - name: Build frontend assets
         run: npm run build
 
-      # --------- Deploy Laravel root (outside public_html) ------------
+      # --------- Deploy Laravel root (exclude vendor & public) ------------
       - name: Deploy Laravel root via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
@@ -69,7 +69,8 @@ jobs:
             .gitignore
             .git/
             .env
-            public
+            public/
+            vendor/
           dry-run: false
 
       # --------- Deploy Laravel public ke public_html -----------
