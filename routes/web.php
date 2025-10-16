@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 
 Route::get('/', function () {
-    return view('welcome', [
+    return view('maintainance', [
         'data' => [
             'appName' => 'Nagara AC Batang',
             'image' => Media::where('media_type', 'galleries')->get(),

@@ -13,7 +13,7 @@
     <!-- KIRI: INFO -->
     <div class="flex-1 flex flex-col items-center justify-center text-center space-y-6 p-8">
         <h1 class="text-4xl font-bold text-gray-800 dark:text-gray-100">
-            🛠️ Website Sedang Dalam Perbaikan
+            Website Sedang Dalam Perbaikan
         </h1>
 
         <p class="text-gray-600 dark:text-gray-400">
@@ -25,11 +25,11 @@
         <div id="countdown" class="text-2xl font-semibold text-gray-700 dark:text-gray-200"></div>
 
         <div id="finished" class="text-2xl font-semibold text-green-600 dark:text-green-400 hidden">
-            ✅ Website sudah aktif kembali!
+            Website sudah aktif kembali!
         </div>
 
         <p class="text-sm text-gray-400 dark:text-gray-500">
-            Hingga 13 Oktober 2025, 00:00 WIB
+            Hingga 20 Oktober 2025, 00:00 WIB
         </p>
     </div>
 
