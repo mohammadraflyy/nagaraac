@@ -27,8 +27,8 @@ Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified'])
     ->name('dashboard');
 
-Route::middleware(['auth'])->group(function () {
-    Route::redirect('settings', 'settings/profile');
+Route::middleware(['auth'])->prefix('dashboard')->group(function () {
+    Route::redirect('settings', 'dashboard/settings/profile');
 
     Route::get('settings/profile', Profile::class)->name('settings.profile');
     Route::get('settings/password', Password::class)->name('settings.password');
@@ -38,6 +38,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('categories', CategoryManager::class)->name('categories');
     Route::get('tags', TagManager::class)->name('tags');
     Route::get('media', MediaManager::class)->name('media');
+
     Route::prefix('posts')->group(function () {
         Route::get('/', PostTable::class)->name('posts.index');
         Route::get('/create', PostForm::class)->name('posts.create');
