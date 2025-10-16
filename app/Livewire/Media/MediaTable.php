@@ -10,7 +10,7 @@ class MediaTable extends Component
 {
     use WithDataTableActions;
 
-    protected $listeners = ['saved' => '$refresh'];
+    protected $listeners = ['mediaSaved' => '$refresh'];
 
     public string $modelClass = Media::class;
     public string $entityName = 'media';
