@@ -64,13 +64,13 @@ jobs:
           server-dir: /nagaraac/       # Laravel root aman, di luar public_html
           exclude: |
             .github/
-            node_modules/
-            tests/
+            /node_modules/
+            /tests/
             .gitignore
             .git/
             .env
-            public/
-            vendor/
+            /public/
+            /vendor/
           dry-run: false
 
       # --------- Deploy Laravel public ke public_html -----------
