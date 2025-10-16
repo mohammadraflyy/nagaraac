@@ -52,8 +52,8 @@ jobs:
       - name: Build frontend assets
         run: npm run build
 
-      # --------- Deploy via FTP -----------------
-      - name: Deploy via FTP
+      # --------- Deploy Laravel root (outside public_html) ------------
+      - name: Deploy Laravel root via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
           server: ${{ secrets.FTP_HOST }}
@@ -61,7 +61,7 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           port: ${{ secrets.FTP_PORT }}
           local-dir: ./
-          server-dir: /public_html/
+          server-dir: /nagaraac/       # Laravel root aman, di luar public_html
           exclude: |
             .github/
             node_modules/
@@ -69,11 +69,25 @@ jobs:
             .gitignore
             .git/
             .env
-            public/storage
+            public
           dry-run: false
 
-      # --------- Run Artisan via SSH -----------
-      - name: Run Artisan commands via SSH
+      # --------- Deploy Laravel public ke public_html -----------
+      - name: Deploy Laravel public via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.6
+        with:
+          server: ${{ secrets.FTP_HOST }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          port: ${{ secrets.FTP_PORT }}
+          local-dir: ./public
+          server-dir: /public_html/         # root domain utama
+          exclude: |
+            storage/
+          dry-run: false
+
+      # --------- Run Artisan via SSH & update index.php -----------
+      - name: Run Artisan commands and update index.php via SSH
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.SSH_HOST }}
@@ -81,10 +95,17 @@ jobs:
           password: ${{ secrets.SSH_PASSWORD }}
           port: ${{ secrets.SSH_PORT }}
           script: |
-            cd /public_html
-            php artisan storage:link || true
-            php artisan migrate --force
-            php artisan config:cache
-            php artisan route:cache
-            php artisan view:cache
-            php artisan queue:restart || true 
+            # Update public_html/index.php paths
+            INDEX_FILE=/public_html/index.php
+            sed -i "s|require __DIR__ . '/..\/vendor/autoload.php';|require __DIR__.'/../nagaraac/vendor/autoload.php';|" $INDEX_FILE
+            sed -i "s|\$app = require_once __DIR__ . '/..\/bootstrap/app.php';|\$app = require_once __DIR__.'/../nagaraac/bootstrap/app.php';|" $INDEX_FILE
+            
+            # Create storage symlink
+            php /nagaraac/artisan storage:link || true
+            
+            # Run migrations and cache
+            php /nagaraac/artisan migrate --force
+            php /nagaraac/artisan config:cache
+            php /nagaraac/artisan route:cache
+            php /nagaraac/artisan view:cache
+            php /nagaraac/artisan queue:restart || true
