@@ -11,6 +11,8 @@ use App\Livewire\Settings\TwoFactor;
 use App\Livewire\Tags\TagManager;
 use App\Livewire\Users\UserManager;
 use App\Livewire\Home\Home;
+use App\Livewire\Bookings\Booking;
+use App\Livewire\Testimonials\Testimonial;
 use App\Models\Media;
 use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
@@ -26,6 +28,9 @@ Route::get('/', env('APP_MAINTENANCE', false)
     }
     : Home::class
 )->name('home');
+
+Route::get('booking', Booking::class)->name('booking');
+Route::get('testimonial', Testimonial::class)->name('testimonial');
 
 Route::view('dashboard', 'dashboard')
     ->middleware(['auth', 'verified'])

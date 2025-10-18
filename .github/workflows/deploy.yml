@@ -2,13 +2,14 @@ name: Laravel CI/CD to Shared Hosting
 
 on:
   push:
-    branches: [main]
+    branches: [main, staging]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
+      # ---------------- Checkout Code ----------------
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -19,7 +20,7 @@ jobs:
           php-version: '8.3'
           extensions: mbstring, bcmath, curl, sqlite, mysql
 
-      # --------- Composer dependencies -----------
+      # ---------------- Composer Dependencies ----------------
       - name: Cache Composer dependencies
         uses: actions/cache@v3
         with:
@@ -31,7 +32,7 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-dev --optimize-autoloader
 
-      # --------- Node.js Setup ------------------
+      # ---------------- Node.js Setup ----------------
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
@@ -48,11 +49,23 @@ jobs:
       - name: Install Node modules
         run: npm ci
 
-      # --------- Build frontend assets -----------
+      # ---------------- Build Frontend ----------------
       - name: Build frontend assets
         run: npm run build
 
-      # --------- Deploy Laravel root (exclude vendor & public) ------------
+      # ---------------- Check Migration Changes ----------------
+      - name: Check for migration changes
+        id: check_migrations
+        run: |
+          if git diff --name-only HEAD~1 HEAD | grep -q '^database/migrations/'; then
+            echo "✅ Migration changes detected."
+            echo "MIGRATION_CHANGED=true" >> $GITHUB_ENV
+          else
+            echo "ℹ️ No migration changes detected."
+            echo "MIGRATION_CHANGED=false" >> $GITHUB_ENV
+          fi
+
+      # ---------------- Deploy Laravel root (app) ----------------
       - name: Deploy Laravel root via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
@@ -60,8 +73,8 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           port: ${{ secrets.FTP_PORT }}
-          local-dir: ./
-          server-dir: /nagaraac/       # Laravel root aman, di luar public_html
+          local-dir: ./        # Laravel root
+          server-dir: /nagaraac/
           exclude: |
             .github/
             /node_modules/
@@ -73,7 +86,7 @@ jobs:
             /vendor/
           dry-run: false
 
-      # --------- Deploy Laravel public ke public_html -----------
+      # ---------------- Deploy Public Folder ----------------
       - name: Deploy Laravel public via FTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
         with:
@@ -82,12 +95,12 @@ jobs:
           password: ${{ secrets.FTP_PASSWORD }}
           port: ${{ secrets.FTP_PORT }}
           local-dir: ./public/
-          server-dir: /public_html/         # root domain utama
+          server-dir: /public_html/
           exclude: |
             /storage/
           dry-run: false
 
-      # --------- Run Artisan via SSH & update index.php -----------
+      # ---------------- Run Artisan & Update index.php ----------------
       - name: Run Artisan commands and update index.php via SSH
         uses: appleboy/ssh-action@v1
         with:
@@ -106,31 +119,24 @@ jobs:
             cp $INDEX_FILE $BACKUP_FILE
 
             echo "🔧 Mengedit path di index.php..."
-
-            # Update autoload path
             sed -i "s|require __DIR__.'/../vendor/autoload.php';|require __DIR__.'/../nagaraac/vendor/autoload.php';|" $INDEX_FILE
-
-            # Update bootstrap path
             sed -i "s|require_once __DIR__.'/../bootstrap/app.php';|require_once __DIR__.'/../nagaraac/bootstrap/app.php';|" $INDEX_FILE
 
-            # Verifikasi apakah edit berhasil
-            if grep -q "nagaraac/vendor/autoload.php" $INDEX_FILE && grep -q "nagaraac/bootstrap/app.php" $INDEX_FILE; then
-              echo "✅ index.php berhasil diperbarui."
-            else
-              echo "❌ Gagal mengedit index.php, mengembalikan file dari backup..."
-              mv $BACKUP_FILE $INDEX_FILE
-              exit 1
-            fi
-
             echo "🚀 Menjalankan Artisan commands..."
-
             php $APP_PATH/artisan storage:link || true
             mv $APP_PATH/public/storage /home/nagaraac/public_html || true
-            php $APP_PATH/artisan migrate --force
+
+            # Run migration only if migration files changed
+            if [ "${{ env.MIGRATION_CHANGED }}" = "true" ]; then
+              echo "🗃️ Migration changes detected — running migrate..."
+              php $APP_PATH/artisan migrate --force
+            else
+              echo "⏭️ No migration changes — skipping database migration."
+            fi
+
             php $APP_PATH/artisan config:cache
             php $APP_PATH/artisan route:cache
             php $APP_PATH/artisan view:cache
             php $APP_PATH/artisan queue:restart || true
 
             echo "🎉 Deployment selesai dengan aman."
-
